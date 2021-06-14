@@ -10,7 +10,7 @@ from scipy.linalg import cholesky, cho_solve
 
 from .model import model_base
 
-@lru_cache(maxsize=8)
+#@lru_cache(maxsize=8)
 def _load_gp(fname_base):
     kernel=None
     with open(fname_base+".json",'r') as f:

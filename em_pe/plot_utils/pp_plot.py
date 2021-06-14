@@ -15,6 +15,9 @@ parser.add_argument("--directory", help="PP plot run directory")
 parser.add_argument("--name", help="Name")
 parser.add_argument("--exclude-param", action="append", help="parameter to exclude from plot")
 parser.add_argument("--exclude-dir", action="append", help="Exclude a run by directory name")
+parser.add_argument("--energy", action="store_true", help="Use ejecta energy E=0.5*mej*vej**2 as a parameter")
+parser.add_argument("--min-weight", type=float, default=0., help="Minimum weight to keep from posterior samples")
+parser.add_argument("--samples-fname", default="samples.txt", help="Filename used for individual posterior sample files")
 args = parser.parse_args()
 
 exclude_params = args.exclude_param if args.exclude_param is not None else []
@@ -47,7 +50,8 @@ tex_dict = {'mej':'$m_{ej}$',
             'Tc_blue':'Tc [blue]',
             'dist':'Distance',
             'kappa':'$\kappa$',
-            'sigma':'$\\sigma$'
+            'sigma':'$\\sigma$',
+            'energy':'$E$'
 }
 
 base_dir = args.directory
@@ -69,34 +73,44 @@ dir_list = []
 
 for d in os.listdir(base_dir):
     curr_dir = base_dir + d + "/"
-    if not os.path.isdir(curr_dir) or "samples.txt" not in os.listdir(curr_dir) or curr_dir in exclude_dir or d in exclude_dir:
+    if not os.path.isdir(curr_dir) or args.samples_fname not in os.listdir(curr_dir) or curr_dir in exclude_dir or d in exclude_dir:
         continue
     print("reading samples from", curr_dir)
-    s = np.loadtxt(curr_dir + "samples.txt")
+    s = np.loadtxt(curr_dir + args.samples_fname)
     truths = np.loadtxt(curr_dir + "test_truths.txt")
     truths = dict(zip(ordered_params, truths))
-    with open(curr_dir + "samples.txt") as f:
+    if args.energy:
+        truths["energy"] = 0.5 * truths["mej"] * truths["vej"]**2
+    with open(curr_dir + args.samples_fname) as f:
         ### the "header" contains the column names
         header = f.readline().strip().split(" ")[1:]
     samples = {header[i]:s[:,i] for i in range(len(header))}
+    if args.energy:
+        header.append("energy")
+        samples["energy"] = 0.5 * samples["mej"] * samples["vej"]**2
     lnL = samples["lnL"]
     p = samples["p"]
     p_s = samples["p_s"]
+    L = np.exp(lnL - np.max(lnL))
+    weights = L * p / p_s
+    weights /= np.sum(weights)
+    mask = weights >= args.min_weight
+    weights = weights[mask]
+    lnL = lnL[mask]
+    p = p[mask]
+    p_s = p_s[mask]
     temp = np.exp(lnL) * p / p_s
     eff_samp = np.sum(temp) / np.max(temp)
     print("    eff_samp = {}".format(eff_samp))
     eff_samp_list.append(eff_samp)
     dir_list.append(d)
-    L = np.exp(lnL - np.max(lnL))
-    weights = L * p / p_s
-    weights /= np.sum(weights)
     for i in range(3, len(header)):
         p = header[i]
         if p in exclude_params: continue
         if p not in params_used:
             cache[p] = {"CDF":[], "true":[], "ML":[]}
             params_used.add(p)
-        cdf = np.sum(weights[samples[p] < truths[p]])
+        cdf = np.sum(weights[samples[p][mask] < truths[p]])
         cache[p]["CDF"].append(cdf)
         cache[p]["true"].append(truths[p])
         cache[p]["ML"].append(samples[p][np.argmax(lnL)])
@@ -122,7 +136,8 @@ markers = {
         "vej_red":"o",
         "vej_purple":"o",
         "vej_blue":"o",
-        "sigma":"+"
+        "sigma":"+",
+        "energy":"o"
 }
 colors = {
         "mej":"red",
@@ -133,7 +148,8 @@ colors = {
         "vej_red":"red",
         "vej_purple":"purple",
         "vej_blue":"blue",
-        "sigma":"black"
+        "sigma":"black",
+        "energy":"m"
 }
 
 for p in params_used:
@@ -146,7 +162,7 @@ for p in params_used:
         out_dict[i]["params"][p]["true"] = cache[p]["true"][i]
         out_dict[i]["params"][p]["ML"] = cache[p]["ML"][i]
         if mask[i]:
-            (xval,) = np.where(ind == j)[0] / npts_valid
+            (xval,) = np.where(ind == j)[0] / (npts_valid - 1)
             j += 1.0
         else:
             xval = np.nan
@@ -166,9 +182,11 @@ pvals_lims = binomial_credible_interval_default(xvals, npts_valid, nParams=(len(
 plt.plot(xvals, pvals_lims[:,0], color='k', ls=':')
 plt.plot(xvals, pvals_lims[:,1], color='k', ls=':')
 
-plt.xlabel("$P(x_{\\rm inj})$")
-plt.ylabel("$\hat{P}$")
-plt.legend()
+plt.xlabel("$P(x_{\\rm inj})$", fontsize=16)
+plt.ylabel("$\hat{P}$", fontsize=16)
+plt.legend(prop={"size":14})
+plt.xticks(fontsize=12)
+plt.yticks(fontsize=12)
 plt.tight_layout()
 
 plt.savefig("pp_plot.png")

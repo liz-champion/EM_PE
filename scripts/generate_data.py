@@ -82,15 +82,14 @@ t_bounds = [max(0.01, args.tmin), args.tmax]
 ### set model parameters
 model.set_params(params, t_bounds)
 
-### generate times
-#tdays = np.logspace(np.log10(args.tmin), np.log10(args.tmax), args.n)
-tdays = np.exp(np.random.uniform(np.log(args.tmin), np.log(args.tmax), args.n))
-tdays = np.sort(tdays)
-
 data_dict = {}
 
 ### generate the data
 for band in model.bands:
+    ### generate times
+    #tdays = np.logspace(np.log10(args.tmin), np.log10(args.tmax), args.n)
+    tdays = np.exp(np.random.uniform(np.log(args.tmin), np.log(args.tmax), args.n))
+    tdays = np.sort(tdays)
     m, _ = model.evaluate(tdays, band)
     if 'dist' in params:
         dist = params['dist']

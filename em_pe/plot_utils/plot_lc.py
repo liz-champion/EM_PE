@@ -119,7 +119,7 @@ def generate_lc_plot(out, b, tmin, tmax, m=None, sample_file=None, lc_file=None,
                         lc_array[i] += 5.0 * (np.log10(params["dist"][i] * 1.0e6) - 1.0)
                 else:
                     lc_array = np.empty((num_samples, n_pts))
-                    lc_err_array = np.empty((num_samples, npts))
+                    lc_err_array = np.empty((num_samples, n_pts))
                     for row in range(num_samples):
                         params = dict(zip(param_names, param_array[row]))
                         if fixed_params is not None:
@@ -127,7 +127,7 @@ def generate_lc_plot(out, b, tmin, tmax, m=None, sample_file=None, lc_file=None,
                                 params[name] = val
                         model.set_params(params, [tmin, tmax])
                         dist = params['dist']
-                        lc_array[row], lc_err_arry[row] = model.evaluate(t, band)
+                        lc_array[row], lc_err_array[row] = model.evaluate(t, band)
                         lc_array[row] += 5.0 * (np.log10(dist * 1.0e6) - 1.0)
                 lc_array += offsets[band]
                 #min_lc = np.amin(lc_array, axis=0)
@@ -165,7 +165,7 @@ def generate_lc_plot(out, b, tmin, tmax, m=None, sample_file=None, lc_file=None,
         plt.gca().invert_yaxis()
     if log_time:
         plt.xscale('log')
-    ticks = [x for x in [0.125, 0.5, 1, 2, 4, 8, 16, 32] if x <= tmax]
+    ticks = [x for x in [0.125, 0.5, 1, 2, 4, 8, 16, 32] if tmin <= x <= tmax]
     labels = [str(x) for x in ticks]
     plt.gca().set_xticks(ticks)
     plt.gca().set_xticklabels(labels)

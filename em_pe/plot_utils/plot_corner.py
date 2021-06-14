@@ -81,8 +81,12 @@ def generate_corner_plot(sample_files, out, params, truths=None, cutoff=0, frac=
                 'mej_purple':'$m_{ej}$ [purple] $(M_\\odot)$',
                 'mej_blue':'$m_{ej}$ [blue] $(M_\\odot)$',
                 'mej_dyn':'$m_{ej}$ [dyn] $(M_\\odot)$',
+                'log_mej_red':'log$_{10}( M_{red} / M_\\odot)$',
+                'log_mej_blue':'log$_{10}( M_{blue} / M_\\odot)$',
+                'log_mej_purple':'log$_{10}( M_{purple} / M_\\odot)$',
                 'log_mej_dyn':'log$_{10}( M_{D} / M_\\odot)$',
                 'log_mej_wind':'log$_{10}( M_{W} / M_\\odot)$',
+                'log_mej':'log$_{10}( M / M_\\odot)$',
                 'mej_wind':'$m_{ej}$ [wind] $(M_\\odot)$',
                 'vej_red':'$v_{ej} / c$ [red]',
                 'vej_purple':'$v_{ej} / c$ [purple]',
@@ -148,14 +152,11 @@ def generate_corner_plot(sample_files, out, params, truths=None, cutoff=0, frac=
 
         if log_mass:
             for index, name in enumerate(params):
-                if name == "mej_dyn":
-                    index_dict["log_mej_dyn"] = index_dict["mej_dyn"]
-                    samples[:,index_dict["log_mej_dyn"]] = np.log10(samples[:,index_dict["log_mej_dyn"]])
-                    params[index] = "log_mej_dyn"
-                if name == "mej_wind":
-                    index_dict["log_mej_wind"] = index_dict["mej_wind"]
-                    samples[:,index_dict["log_mej_wind"]] = np.log10(samples[:,index_dict["log_mej_wind"]])
-                    params[index] = "log_mej_wind"
+                if len(name) >= 3 and name[:3] == "mej":
+                    name_end = name[3:]
+                    index_dict["log_mej" + name_end] = index_dict["mej" + name_end]
+                    samples[:,index_dict["log_mej" + name_end]] = np.log10(samples[:,index_dict["log_mej" + name_end]])
+                    params[index] = "log_mej" + name_end
 
         lnL = samples[:,0]
         p = samples[:,1]
@@ -189,17 +190,16 @@ def generate_corner_plot(sample_files, out, params, truths=None, cutoff=0, frac=
         x = x[mask2]
         print('Median weight of masked sample set:', np.median(weights))
         color = color_list[i]
-        print(color)
-        for ii in range(len(params)):
-            if params[ii] == 'log_mej_red':
-                params[ii] = 'mej_red'
-                x[:,ii] = 10.0**x[:,ii]
-            elif params[ii] == 'log_mej_purple':
-                params[ii] = 'mej_purple'
-                x[:,ii] = 10.0**x[:,ii]
-            elif params[ii] == 'log_mej_blue':
-                params[ii] = 'mej_blue'
-                x[:,ii] = 10.0**x[:,ii]
+        #for ii in range(len(params)):
+        #    if params[ii] == 'log_mej_red':
+        #        params[ii] = 'mej_red'
+        #        x[:,ii] = 10.0**x[:,ii]
+        #    elif params[ii] == 'log_mej_purple':
+        #        params[ii] = 'mej_purple'
+        #        x[:,ii] = 10.0**x[:,ii]
+        #    elif params[ii] == 'log_mej_blue':
+        #        params[ii] = 'mej_blue'
+        #        x[:,ii] = 10.0**x[:,ii]
 
         labels = []
         for param in params:
@@ -214,6 +214,7 @@ def generate_corner_plot(sample_files, out, params, truths=None, cutoff=0, frac=
         else:
             plot_density = False
         ### make the corner plot
+        print(fig_base)
         fig_base = corner.corner(x, weights=weights, levels=args.cl, fig=fig_base, labels=labels, truths=truths,
                                  color=color, plot_datapoints=False, plot_density=plot_density,
                                  contours=True, smooth1d=0.1, smooth=0.1, label_kwargs={"fontsize":16})
